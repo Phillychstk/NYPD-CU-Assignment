@@ -1,0 +1,85 @@
+---
+title: "NYPD Shootings EDA"
+author: "Phillip Hughes"
+date: "2023-12-31"
+output: html_document
+---
+# First we get our packages and Data
+
+We will be using the tidyverse 
+```{r setup, results='hide'}
+library(tidyverse)
+```
+
+We will be importing the NYC_Shooting_Data into our Rmarkdown file.
+
+```{r NYC Shooting data}
+NYPD_Shooting_Incident_Data_Historic_ <- read_csv("NYPD_Shooting_Incident_Data__Historic_.csv")
+NYPD_Shooting_Incident_Data_Historic_
+```
+
+## Tidying
+I will only focus on Borough, Dates, Victims and if the victim died.
+```{r cleaning the data to get what I want}
+NYC_Shootings_Boro<- NYPD_Shooting_Incident_Data_Historic_ %>% 
+  select(c(OCCUR_DATE, BORO, STATISTICAL_MURDER_FLAG, VIC_AGE_GROUP, VIC_SEX, VIC_RACE)) %>%
+    mutate(OCCUR_DATE=mdy(OCCUR_DATE),
+         YEAR = year(OCCUR_DATE),
+         MONTH=month(OCCUR_DATE))
+head(NYC_Shootings_Boro)
+```
+
+
+# Visualization
+
+I am interested in the 
+```{r Plotting Boroughs}
+NYC_Shootings_Boro %>% ggplot(aes(x=YEAR, fill = VIC_AGE_GROUP))+
+  geom_bar()+
+  ggtitle("NYC Shootings by Age group")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Year")+
+  ylab("Number of shootings")+
+  labs(fill = "Age Group")
+  
+```
+
+This does raise the question of Why the Bronx and Brooklyn are so much higher in terms of shootings. Although the shootings by the victim age group seem to be consistent across the boroughs. But it show that ages between 18 and 44 are exponentially higher.
+
+```{r shooting by boro}
+NYC_Shootings_Boro %>% ggplot(aes(x=YEAR, fill=VIC_RACE))+
+  geom_bar()+
+  ggtitle("NYC Shootings by race per year")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Year")+
+  ylab("Number of shootings")+
+  guides(fill=guide_legend(title="Victim Race"))
+```
+
+This shows that Black individuals are at a higher chance of being the victim of a shooting by a disproportional ammount. There are many factors that might impact why this is. Bu t further data would be needed.
+
+```{r getting total shooting and murders by Boro and Year}
+Murders <- NYC_Shootings_Boro %>% group_by(YEAR,BORO,STATISTICAL_MURDER_FLAG) %>% summarise(Murders = sum(STATISTICAL_MURDER_FLAG), Non_Fatal_Shootings = table(STATISTICAL_MURDER_FLAG)) 
+Murders<-Murders %>% mutate(Shootings=sum(Non_Fatal_Shootings), Murder_Percent= 100* Murders/Shootings) 
+Murders<- Murders[Murders$Murders !=0,]
+Murders<- Murders %>% select(-c(Non_Fatal_Shootings,STATISTICAL_MURDER_FLAG))
+Murders
+```
+So I set up a new table to compare shooting totals to number that resulted in murder to see if there was a change i murder percent between years. But it appears that there is not a change in Murder over the years.
+
+```{r shootings by BORO}
+Murders %>% ggplot(aes(x=YEAR, y=Shootings, group=BORO))+
+  geom_line(aes(color=BORO))+
+  geom_point(aes(color=BORO))
+```
+this graph shows shootings by boroughs throughout the years data has been collected. Staten Island has been sort of an outlier as the number of shootings has remained relatively low. For the rest of the Burroughs there was a decrease from 2006 to 2019. Then a sharp increase between 2019 and 2020. and has gone down from 2021 to 2022.
+
+# Potential Bias
+
+I believe there is bias in what this data shows because it doesnt take into account population percent that were confined to their neighborhoods in 2019-2022 during the pandemic. I think theree would be a more complete picture to be had if there was data included that represented this issue.
+
+
+```{r}
+sessionInfo()
+```
+
